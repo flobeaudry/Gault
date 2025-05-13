@@ -10,6 +10,7 @@ from scipy.ndimage import gaussian_filter1d
 # Code to analyse the temperature data from the SB card inside the buoy
 # Create temperature profiles for spwcific time sequences
 # Pcolor graph
+# Need to clean up
 
 
 # ----------------- Open temperature data from the SD card of the buoy ----------------------------------------------

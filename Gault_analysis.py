@@ -6,6 +6,8 @@ import data.physical_measurements.data as dtf
 import xarray as xr
 import re
 
+# Open file with snow, ice and slush measurements from the field, and plot the data
+
 xls = pd.ExcelFile("Gault_Data_2025_layer.xlsx", engine="openpyxl")
 #xls = pd.ExcelFile("Gault_Data_2025_03_12.xlsx", engine="openpyxl")
 
@@ -17,12 +19,12 @@ print("Sheets to process:", valid_sheets)
 
 dfs_by_date = {}
 for sheet in valid_sheets:
-    # Read the sheet, skipping the first 4 rows, and selecting columns 6, 7, 8 (index 5, 6, 7)
+    # Read the sheet, skipping the first 4 rows, and selecting columns 6, 7, 8, 9 (index 5, 6, 7, 8)
     df = pd.read_excel(xls, sheet_name=sheet, skiprows=5, usecols=[5, 6, 7, 8])
 
     # Generate the "Distance (m)" column
     num_rows = len(df)  # Get the number of rows in the DataFrame for that date
-    distance = np.linspace(0, 124, num=num_rows)  # Uniformly spaced values between 0 and 124
+    distance = np.linspace(0, 124, num=num_rows)  # Uniformly spaced values between 0 and 124 (length until middle of the lake)
 
     # Add "Distance (m)" as a new column
     df["Distance (m)"] = distance
@@ -30,8 +32,6 @@ for sheet in valid_sheets:
     # Store each sheet's data in a dictionary with the date as the key
     dfs_by_date[sheet] = df
 
-# Now dfs_by_date contains a separate DataFrame for each date
-#print(dfs_by_date["2025-02-08"])
 
 date = "2025-02-14"
 date = "2025-03-11"
@@ -41,7 +41,7 @@ def fill_isolated_nans(series):
     """
     Replaces isolated NaNs (single NaN between two valid values) with the previous valid value.
     """
-    series = series.copy()  # Avoid modifying the original data
+    series = series.copy()
     nan_mask = series.isna()
     
     for i in range(1, len(series) - 1):
@@ -63,9 +63,6 @@ def fig_one_day(dfs_by_date, date, ymin = -90, ymax = 30):
     ice = fill_isolated_nans(ice)
     layer = fill_isolated_nans(layer)
     distance_plot = fill_isolated_nans(distance_plot)
-    
-    print("HERE",snow)
-
 
     #distance_bouee = 18
     distance_labels = str(distance_plot)
@@ -91,28 +88,21 @@ def fig_one_day(dfs_by_date, date, ymin = -90, ymax = 30):
 
     ax.stackplot(
         distance_plot,
-        #slush[time_index],
-        #snow+np.nan_to_num(slush),
         snow,
-        #colors=["xkcd:dark blue", "xkcd:baby blue"],
         colors=[ "xkcd:baby blue"],
         labels=["snow"],
     )
 
     ax.stackplot(
         distance_plot,
-        #-ice,
         -ice-np.nan_to_num(slush),
-        #colors=[ "xkcd:light blue grey"],
         colors=[ "xkcd:robin's egg blue"],
         labels=[ "ice"],
     )
 
     ax.stackplot(
         distance_plot,
-        #slush,
         -slush,
-        #colors=["xkcd:dark blue", "xkcd:baby blue"],
         colors=["xkcd:dark blue"],
         labels=["snow-ice"],
     )
@@ -134,7 +124,6 @@ def fig_one_day(dfs_by_date, date, ymin = -90, ymax = 30):
     # Labels and title and legend
     ax.set_xlabel("Distance from dock [m]")
     ax.set_xticks(distance[::2]*10)
-    #ax.set_xticklabels(distance_labels[::2])
     ax.set_ylabel(
         "Thickness [cm]",
         rotation=0,
@@ -142,8 +131,7 @@ def fig_one_day(dfs_by_date, date, ymin = -90, ymax = 30):
         ha="right",
         position=(0, 0.9),
     )
-    #x.set_title(xds.coords["time"].dt.strftime("%Y-%m-%d").values)
-    #ax.set_ylim((np.min(-snow[time_index] - slush[time_index] - ice[time_index]) - 5, 3))
+
     ax.set_ylim((np.nanmin(- ice) - 5, np.nanmax(snow + slush)+ 7))
     ax.set_xlim((0, np.nanmax(distance_plot)))
 
@@ -161,13 +149,7 @@ def fig_one_day(dfs_by_date, date, ymin = -90, ymax = 30):
         frameon=False,
         ncol=1,
         handlelength=1,
-        #fontsize=12
     )
-
-    # Show plot
-    #plt.savefig(
-    #    "plots/gault_" + xds.coords["time"].dt.strftime("%Y-%m-%d").values[0] + ".png", dpi=300
-    #    )
 
     plt.savefig(
         f"plots/gault_{date}.png", dpi=300
