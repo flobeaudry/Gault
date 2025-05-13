@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse, Rectangle
 import pandas as pd
-import data as dtf
+import data.physical_measurements.data as dtf
 import xarray as xr
 import re
 

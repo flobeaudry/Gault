@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse
+from matplotlib.patches import Ellipse, Rectangle
 import pandas as pd
 import data as dtf
 
@@ -10,22 +10,25 @@ import xarray as xr
 # data dependent values
 # ---------------------------------------------------------------
 time_index = 0
-zoom_start = 7
-zoom_end = -2
+#zoom_start = 7
+#zoom_end = -2
 buoy_index = -3
-north_dir = "left"
+north_dir = "right"
 # ---------------------------------------------------------------
-
 
 def draw_arrow(ax, direction, length=0.1, color="black", label=None):
     """Draw an arrow indicating North at (x, y) in the given direction."""
 
     # Define arrow positions and offsets in figure coordinates
     positions = {
-        "top": (-0.2, 0.15, 0, length, "center", "bottom"),  # Center-top
-        "bottom": (-0.2, 0.25, 0, -length, "center", "top"),  # Center-bottom
-        "right": (-0.25, 0.2, length, 0, "left", "center"),  # Right-center
-        "left": (-0.15, 0.2, -length, 0, "right", "center"),  # Left-center
+        #"top": (-0.2, 0.15, 0, length, "center", "bottom"),  # Center-top
+        #"bottom": (-0.2, 0.25, 0, -length, "center", "top"),  # Center-bottom
+        #"right": (-0.25, 0.2, length, 0, "left", "center"),  # Right-center
+        #"left": (-0.15, 0.2, -length, 0, "right", "center"),  # Left-center
+        "top": (-0.26, 0.15, 0, length, "center", "bottom"),  # Center-top
+        "bottom": (-0.26, 0.25, 0, -length, "center", "top"),  # Center-bottom
+        "right": (-0.31, 0.2, length, 0, "left", "center"),  # Right-center
+        "left": (-0.21, 0.2, -length, 0, "right", "center"),  # Left-center
     }
 
     if direction not in positions:
@@ -58,10 +61,14 @@ def draw_arrow(ax, direction, length=0.1, color="black", label=None):
         )
 
 
+
+
+
 # structure
 # data array
 da_ice = xr.DataArray(
-    np.nan_to_num(dtf.ice_array),
+    #np.nan_to_num(dtf.ice_array),
+    dtf.ice_array,
     dims=("time", "distance"),
     coords={
         "time": ("time", pd.to_datetime(dtf.date), {"type": "YYYY-MM-DD"}),
@@ -73,7 +80,9 @@ da_ice = xr.DataArray(
     name="ice thickness",
 )
 da_slush = xr.DataArray(
-    np.nan_to_num(dtf.slush_array - dtf.ice_array),
+    #np.nan_to_num(dtf.slush_array - dtf.ice_array),
+    #np.ma.masked_invalid(dtf.slush_array - dtf.ice_array),
+    (dtf.slush_array - dtf.ice_array),
     dims=("time", "distance"),
     coords={
         "time": ("time", pd.to_datetime(dtf.date), {"type": "YYYY-MM-DD"}),
@@ -101,6 +110,7 @@ da_snow = xr.DataArray(
     name="snow thickness",
 )
 
+
 # dictionary
 dic = {
     "ice_thickness": da_ice,
@@ -113,53 +123,118 @@ xds = xr.Dataset(dic)
 
 # Extract x values and variables
 distance = xds.distance.values
-distance_labels = distance[time_index].astype(str)
-distance = np.arange(len(distance[time_index]))
+print(distance[0])
+distance_plot = distance[0]
+#distance_plot = np.arange(len(distance[time_index]))
+#distance_labels = distance[time_index].astype(str)
+
+values_float = distance[time_index].astype(float)
+distance_labels_nostr = (values_float[(values_float < 71) | (values_float > 79)])
+distance_labels = distance_labels_nostr.astype(str)
+distance = np.arange(len(distance_labels_nostr))
+print("distance", distance)
+print("distance_labels", distance_labels)
+print("distance_plot", distance_plot)
+
 ice = xds["ice_thickness"].values
 slush = xds["slush_thickness"].values
 snow = xds["snow_thickness"].values
 
+
 # Create stacked bar plots
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(7,4.5))
 fig.set_tight_layout(True)
 
 # aspect ratio for buoy
-pos = ax.get_position()
-width = pos.width
-height = pos.height
-aspect_ratio = (
-    (-np.min(-snow[time_index] - slush[time_index] - ice[time_index]) + 8)
-    / np.max(distance)
-    / (height / width)
-)
+#pos = ax.get_position()
+#width = pos.width
+#height = pos.height
+#aspect_ratio = (
+#    (-np.min(-snow[time_index] - slush[time_index] - ice[time_index]) + 8)
+#    / np.max(distance_plot)
+#    / (height / width)
+#)
 
 # plot buoy
-radius = 0.5
+radius = 3
 circle = Ellipse(
-    (distance[buoy_index], 1),
+    (distance_plot[buoy_index]-5.2, 29),
     radius,
-    radius * aspect_ratio,
-    color="orange",
-    label="buoy",
+    #radius * aspect_ratio,
+    radius,
+    color="darkorange",
+    #label="buoy",
 )
-ax.add_patch(circle)
+#print(distance[buoy_index])
+#ax.add_patch(circle)
+
+plt.scatter(distance_plot[buoy_index]-5.2, 29, s=100,color='darkorange', label="buoy")
 
 # plot
+#ax.stackplot(
+#    distance,
+#    -ice[time_index],
+#    slush[time_index],
+#    snow[time_index],
+#    colors=["xkcd:baby blue", "xkcd:dark blue", "xkcd:bright blue"],
+#    labels=["snow", "snow-ice", "ice"],
+#)
+
+
+#ax.stackplot(
+#    distance_plot,
+#    slush[time_index],
+#    snow[time_index],
+#    #colors=["xkcd:dark blue", "xkcd:baby blue"],
+#    colors=["xkcd:dark blue", "xkcd:baby blue"],
+#    labels=["snow-ice", "snow"],
+#)
 ax.stackplot(
-    distance,
-    -snow[time_index],
-    -slush[time_index],
-    -ice[time_index],
-    colors=["xkcd:baby blue", "xkcd:dark blue", "xkcd:bright blue"],
-    labels=["snow", "slush", "ice"],
+    distance_plot,
+    #slush[time_index],
+    snow[time_index]+np.nan_to_num(slush[time_index]),
+    #colors=["xkcd:dark blue", "xkcd:baby blue"],
+    colors=[ "xkcd:baby blue"],
+    labels=["snow"],
 )
+ax.stackplot(
+    distance_plot,
+    slush[time_index],
+    #colors=["xkcd:dark blue", "xkcd:baby blue"],
+    colors=["xkcd:dark blue"],
+    labels=["snow-ice"],
+)
+ax.stackplot(
+    distance_plot,
+    -ice[time_index],
+    #colors=[ "xkcd:light blue grey"],
+    colors=[ "xkcd:robin's egg blue"],
+    labels=[ "ice"],
+)
+
+
+# Adding a rectangular patch with hatching
+hatch_area = Rectangle(
+    (70, 0.2),  # (x, y) bottom-left corner of the rectangle
+    4,  # Width
+    4.6,  # Height (adjust according to your y-range)
+    facecolor='none',  # Keep it transparent but with hatching
+    edgecolor='xkcd:dark blue',
+    hatch='////',
+)
+ax.add_patch(hatch_area)
+
 
 # arrow
 draw_arrow(ax, north_dir, color="k", label="N")
 
+
+#ax.add_patch(circle)
+
+
 # Labels and title and legend
-ax.set_xlabel("Distance [m]")
-ax.set_xticks(distance[::2])
+ax.set_xlabel("Distance from dock [m]")
+ax.set_xticks(distance[::2]*10)
 ax.set_xticklabels(distance_labels[::2])
 ax.set_ylabel(
     "Thickness [cm]",
@@ -169,31 +244,33 @@ ax.set_ylabel(
     position=(0, 0.9),
 )
 ax.set_title(xds.coords["time"].dt.strftime("%Y-%m-%d").values[time_index])
-ax.set_ylim((np.min(-snow[time_index] - slush[time_index] - ice[time_index]) - 5, 3))
-ax.set_xlim((0, np.max(distance)))
+#ax.set_ylim((np.min(-snow[time_index] - slush[time_index] - ice[time_index]) - 5, 3))
+ax.set_ylim((np.nanmin(- ice[time_index]) - 5, np.nanmax(snow[time_index] + slush[time_index])+ 7))
+ax.set_xlim((0, np.nanmax(distance_plot)))
 
 # vertical lines
 ylenght = ax.get_ylim()[0]
-ax.plot(
-    np.ones(10) * distance[zoom_start],
-    np.linspace(
-        -snow[time_index, zoom_start],
-        ylenght,
-        10,
-    ),
-    "k:",
-    label=r"$10\>$m gap",
-)
-ax.plot(
-    np.ones(10) * distance[zoom_end],
-    np.linspace(
-        -snow[time_index, zoom_end],
-        ylenght,
-        10,
-    ),
-    "k:",
-)
-ax.set_ylim(ylenght)
+#ax.plot(
+#    np.ones(10) * distance[zoom_start],
+#    np.linspace(
+#        -snow[time_index, zoom_start],
+#        ylenght,
+#        10,
+#    ),
+#    "k:",
+#    label=r"$10\>$m gap",
+#)
+#ax.plot(
+#    np.ones(10) * distance[zoom_end],
+#    np.linspace(
+#        -snow[time_index, zoom_end],
+#        ylenght,
+#        10,
+#    ),
+#    "k:",
+#)
+ax.set_ylim(-70,40)
+
 
 # legend
 ax.legend(
@@ -201,13 +278,21 @@ ax.legend(
     bbox_to_anchor=(-0.1, 0.4),
     frameon=False,
     ncol=1,
-    handlelength=0.8,
+    handlelength=1,
+    #fontsize=12
 )
+
+
+ax.set_title("2025-01-31", fontweight ="extra bold", color='k',  family='sans-serif')
+
+ax.invert_xaxis()
+ax.set_xticklabels(distance_labels[::-1][::2])
+print(distance_labels)
 
 # Show plot
 plt.savefig(
-    "plots/gault_" + xds.coords["time"].dt.strftime("%Y-%m-%d").values[0] + ".pdf"
-)
+    "plots/gault_" + xds.coords["time"].dt.strftime("%Y-%m-%d").values[0] + ".png", dpi=300
+    )
 
 # Save to netCDF
 xds.to_netcdf("gault.nc")
